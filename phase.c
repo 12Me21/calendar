@@ -65,7 +65,6 @@ Julian(int year,int month,double day)
 double sun_position(double j)
 {
 	double n,x,e,l,dl,v;
-	double m2;
 	int i;
 
 	n=360/365.2422*j;
@@ -89,9 +88,7 @@ double sun_position(double j)
 double moon_position(double j, double ls)
 {
 
-	double ms,l,mm,n,ev,sms,z,x,lm,bm,ae,ec;
-	double d;
-	double ds, as, dm;
+	double ms,l,mm,n,ev,sms,ae,ec;
 	int i;
 
 	/* ls = sun_position(j) */
@@ -135,7 +132,7 @@ double moon_phase(int year,int month,int day, double hour/*, int* ip*/)
 	//return (1.0 - cos((lm - ls)*RAD))/2;
 }
 
-static void nextDay(int* y, int* m, int* d, double dd)
+/*static void nextDay(int* y, int* m, int* d, double dd)
 {
 	TimePlace tp;
 	double jd = Julian(*y, *m, (double)*d);
@@ -146,7 +143,7 @@ static void nextDay(int* y, int* m, int* d, double dd)
 	*y = tp.year;
 	*m = tp.month;
 	*d = tp.day;
-}
+}*/
 
 /*main()
 {

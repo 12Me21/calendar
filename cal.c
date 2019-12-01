@@ -5,114 +5,106 @@
 
 double moon_phase(int year,int month,int day, double hour);
 
-//char phases[] = ".)bDOCd(";
-
-void pcenter(char *str, int width){
+void print_center(char *str, int width){
 	int len = strlen(str);
 	int before = (width-len)/2;
 	printf("%*s\n", before+len, str);
 }
 
+// re-calculate date to fill in day of week etc.
 void fixtime(struct tm **ts){
 	time_t t = mktime(*ts);
 	*ts = localtime(&t);
 }
 
 int main(int argc, char **argv){
-	int month, year;
-	time_t t;
-	time(&t);
-	struct tm *date = localtime(&t);
+	// get first day of current month
+	time_t current_time;
+	time(&current_time);
+	struct tm *date = localtime(&current_time);
 	date->tm_mday = 1;
+	// adjust month/year if needed
 	if (argc >= 2)
 		date->tm_mon = atoi(argv[1])-1;
-	if (argc == 3)
+	if (argc >= 3)
 		date->tm_year = atoi(argv[2])-1900;
-	fixtime(&date);
-	month = date->tm_mon;
-	year = date->tm_year+1900;
-	int firstday = date->tm_wday;
-	
-	char monthname[80];
-	strftime(monthname, 80, "%B", date);
 
+	fixtime(&date);
+	
+	int month = date->tm_mon;
+	int year = date->tm_year+1900;
+	int firstday = date->tm_wday;
+
+	// print header
+	char title[80];
+	strftime(title, sizeof(title), "%B %Y", date);
+	const char row[] = "+-----+-----+-----+-----+-----+-----+-----+";
+	print_center(title, sizeof(row));
+	puts("  Sun   Mon   Tue   Wed   Thu   Fri   Sat");
+	puts(row);
+
+	// get next month
 	if (++(date->tm_mon) == 12) {
 		date->tm_mon = 0;
 		date->tm_year++;
 	}
 	fixtime(&date);
-	int dim = (date->tm_wday-firstday+7)%7 +28;
-	pcenter(monthname, 6*7+1);
-	printf("  Sun   Mon   Tue   Wed   Thu   Fri   Sat\n");
-	char *row = "+-----+-----+-----+-----+-----+-----+-----+\n";
-	char *empty = "!     !     !     !     !     !     !     !\n";
-	printf(row);
-	int w = 0;
-	int half=0;
-	char moon[31] = {0};
-	double dif_new, dif_first, dif_full, dif_last;
-	double odif_new, odif_first, odif_full, odif_last;
-	int i;
-	double ph;
-	for (i=0;i<=dim+1;i++) {
-		double oph = ph;
-		ph = moon_phase(year, month+1, i, 16);
-		//printf("%f\n", ph);
-		if (ph < oph && i) {
-			if (8-oph < ph) //was prev
-				moon[i-1] = '.';
-			else
-				moon[i] = '.';
-		}
-		if (oph < 4 && ph >= 4 && i) {
-			if (4-oph < ph-4) //was prev
-				moon[i-1] = 'O';
-			else
-				moon[i] = 'O';
-		}
-		if (oph < 2 && ph >= 2 && i) {
-			if (2-oph < ph-2) //was prev
-				moon[i-1] = ')';
-			else
-				moon[i] = ')';
-		}
-		if (oph < 6 && ph >= 6 && i) {
-			if (6-oph < ph-6) //was prev
-				moon[i-1] = '(';
-			else
-				moon[i] = '(';
+	// Calculate number days in current month
+	int days_in_month = (date->tm_wday-firstday+7)%7 +28;
+
+	// Moon phases
+	char moon[32] = {0};
+	int day;
+	double ph, oph;
+	for (day=0; day<=days_in_month+1; day++) {
+		oph = ph;
+		ph = moon_phase(year, month+1, day, 12.00);
+		//time depends on location + moon location. 12:00 average is ok I guess
+		if (day) {
+			// put icons on days closest to each phase
+			if (ph < oph)
+				moon[day - (8-oph < ph)] = '.'; //new
+			else if (oph < 4 && ph >= 4)
+				moon[day - (4-oph < ph-4)] = 'O'; //full
+			else if (oph < 2 && ph >= 2)
+				moon[day - (2-oph < ph-2)] = ')'; //first quarter
+			else if (oph < 6 && ph >= 6)
+				moon[day - (6-oph < ph-6)] = '('; //last quarter
 		}
 	}
-	
-	i = -firstday+1;
-	while(1){
-		if (i<=0 || i>dim)
+
+	// print main calendar
+	int day_of_week = 0;
+	int half = 0;
+	day = -firstday+1;
+	while (1) {
+		if (day<=0 || day>days_in_month) { //empty cell
 			printf("!     ");
-		else{
-			if (!half){
-				printf("!%-5d", i);
-			}else{
-				if (moon[i])
-					printf("!    %c", moon[i]);
+		} else {
+			if (!half) { // top half
+				printf("!%-5d", day);
+			} else { // bottom half
+				if (moon[day])
+					printf("!    %c", moon[day]);
 				else
 					printf("!     ");
 			}
 		}
-		i++;
-		w++;
-		if(w==7){
-			w=0;
-			printf("!\n");
-			if (!half){
-				half=1;
-				i-=7;
-			}else{
-				//printf(empty);
-				printf(row);
-				if(i>dim)
+		day++;
+		// end of row
+		if (++day_of_week == 7) {
+			day_of_week = 0;
+			puts("!");
+			if (!half) { // top half
+				half = 1;
+				day -= 7;
+			} else { // bottom half
+				puts(row);
+				if (day>days_in_month)
 					break;
-				half=0;
+				half = 0;
 			}
 		}
 	}
+	return 0;
 }
